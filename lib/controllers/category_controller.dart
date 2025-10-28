@@ -4,6 +4,10 @@ import '../services/category_service.dart';
 class CategoryController {
   final CategoryService _categoryService = CategoryService();
 
+  Future<CategoryModel> getCategoryById(int id) async {
+    return await _categoryService.getCategoryById(id);
+  }
+
   Future<List<CategoryModel>> fetchCategories() {
     return _categoryService.fetchCategories();
   }

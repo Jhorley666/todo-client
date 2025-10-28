@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:todo_client/controllers/category_controller.dart';
 import '../models/task_model.dart';
 import '../controllers/task_controller.dart';
 import '../services/category_service.dart';
-import '../widgets/task_list_view.dart';
-import '../widgets/task_form_dialog.dart';
+import '../widgets/task_widgets/task_list_view.dart';
+import '../widgets/task_widgets/task_form_dialog.dart';
 import 'category_page.dart'; // Asegúrate de importar la página de categorías
 
 class TaskPage extends StatefulWidget {
@@ -14,7 +15,9 @@ class TaskPage extends StatefulWidget {
 }
 
 class _TaskPageState extends State<TaskPage> {
-  final TaskController _controller = TaskController();
+  final TaskController _taskController = TaskController();
+  final CategoryController _categoryController = CategoryController();
+
   late Future<List<TaskModel>> _tasksFuture;
 
   @override
@@ -25,16 +28,31 @@ class _TaskPageState extends State<TaskPage> {
 
   void _loadTasks() {
     setState(() {
-      _tasksFuture = _controller.fetchTasks();
+      _tasksFuture = _loadTasksWithCategoryNames();
     });
   }
 
+  Future<List<TaskModel>> _loadTasksWithCategoryNames() async {
+    final tasks = await _taskController.fetchTasks();
+    final categories = await _categoryController.fetchCategories();
+
+    final categoryMap = {
+      for (var category in categories) category.id: category.name
+    };
+
+    for (var task in tasks) {
+      task.categoryName = categoryMap[task.categoryId] ?? 'Unknown';
+    }
+
+    return tasks;
+  } 
+  
   void _editTask(TaskModel task) {
     _showTaskFormDialog(task: task);
   }
 
   void _deleteTask(TaskModel task) async {
-    await _controller.deleteTask(task.taskId);
+    await _taskController.deleteTask(task.taskId);
     _loadTasks();
   }
 
@@ -65,7 +83,7 @@ class _TaskPageState extends State<TaskPage> {
           required DateTime dueDate,
         }) async {
           if (task == null) {
-            await _controller.addTask(
+            await _taskController.addTask(
               title: title,
               description: description,
               priority: priority,
@@ -74,7 +92,7 @@ class _TaskPageState extends State<TaskPage> {
               dueDate: dueDate,
             );
           } else {
-            await _controller.updateTask(
+            await _taskController.updateTask(
               id: task.taskId,
               title: title,
               description: description,

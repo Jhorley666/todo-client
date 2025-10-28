@@ -16,6 +16,17 @@ class CategoryService {
     };
   }
 
+  Future<CategoryModel> getCategoryById(int id) async {
+    final headers = await _getHeaders();
+    final response = await http.get(Uri.parse('$baseUrl/$id'), headers: headers);
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return CategoryModel.fromJson(data);
+    } else {
+      throw Exception('Error al obtener la categoría');
+    }
+  }
+
   Future<List<CategoryModel>> fetchCategories() async {
     final headers = await _getHeaders();
     final response = await http.get(Uri.parse(baseUrl), headers: headers);

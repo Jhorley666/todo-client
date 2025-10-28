@@ -11,6 +11,7 @@ class TaskModel {
   final DateTime? dueDate;
   final DateTime createdAt;
   final DateTime updatedAt;
+  String? categoryName;
 
   TaskModel({
     required this.taskId,
@@ -23,6 +24,7 @@ class TaskModel {
     this.dueDate,
     required this.createdAt,
     required this.updatedAt,
+    this.categoryName
   });
 
   factory TaskModel.fromJson(Map<String, dynamic> json) => TaskModel(

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/category_model.dart';
 import '../controllers/category_controller.dart';
-import '../widgets/category_list_view.dart';
-import '../widgets/category_form_dialog.dart';
+import '../widgets/category_widgets/category_list_view.dart';
+import '../widgets/category_widgets/category_form_dialog.dart';
 
 class CategoryPage extends StatefulWidget {
   const CategoryPage({super.key});

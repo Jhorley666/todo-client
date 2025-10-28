@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/category_model.dart';
+import '../../models/category_model.dart';
 
 class CategoryListView extends StatelessWidget {
   final List<CategoryModel> categories;

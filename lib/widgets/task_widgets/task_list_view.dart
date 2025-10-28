@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/task_model.dart';
+import '../../models/task_model.dart';
 
 class TaskListView extends StatelessWidget {
   final List<TaskModel> tasks;
@@ -36,7 +36,7 @@ class TaskListView extends StatelessWidget {
             title: Text(task.title),
             subtitle: Text(
               'Prioridad: ${task.priority.name} | '
-              'Categoría: ${task.categoryId ?? "-"} | '
+              'Categoría: ${task.categoryName ?? "-"} | '
               'Vence: ${task.dueDate != null ? task.dueDate!.toLocal().toString().split(' ')[0] : "-"}',
             ),
             trailing: IconButton(
