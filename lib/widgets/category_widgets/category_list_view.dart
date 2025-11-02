@@ -5,12 +5,14 @@ class CategoryListView extends StatelessWidget {
   final List<CategoryModel> categories;
   final void Function(CategoryModel) onEdit;
   final void Function(CategoryModel) onDelete;
+  final Future<bool?> Function() showDeleteConfirmationDialog;
 
   const CategoryListView({
     super.key,
     required this.categories,
     required this.onEdit,
     required this.onDelete,
+    required this.showDeleteConfirmationDialog,
   });
 
   @override
@@ -31,7 +33,12 @@ class CategoryListView extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: const Icon(Icons.delete, color: Colors.white),
           ),
-          onDismissed: (direction) => onDelete(category),
+          confirmDismiss: (direction) async {
+            return await showDeleteConfirmationDialog();
+          },
+          onDismissed: (direction) {
+            onDelete(category);
+          },
           child: ListTile(
             title: Text(category.name),
             trailing: IconButton(

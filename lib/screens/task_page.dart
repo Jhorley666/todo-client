@@ -7,6 +7,7 @@ import '../controllers/task_status_controller.dart';
 import '../services/category_service.dart';
 import '../widgets/task_widgets/task_list_view.dart';
 import '../widgets/task_widgets/task_form_dialog.dart';
+import '../widgets/utils_widgets/delete_confirmation_dialog.dart';
 import 'category_page.dart'; // Asegúrate de importar la página de categorías
 
 class TaskPage extends StatefulWidget {
@@ -60,28 +61,9 @@ class _TaskPageState extends State<TaskPage> {
   }
 
   Future<bool?> _showDeleteConfirmationDialog() async {
-    return showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirm Task Deletion'),
-        content: const Text(
-          'Are you sure you want to permanently delete this task? This action cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Theme.of(context).colorScheme.onError,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    return DeleteConfirmationDialog.show(
+      context,
+      entityName: 'task',
     );
   }
 

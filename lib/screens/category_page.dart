@@ -3,6 +3,7 @@ import '../models/category_model.dart';
 import '../controllers/category_controller.dart';
 import '../widgets/category_widgets/category_list_view.dart';
 import '../widgets/category_widgets/category_form_dialog.dart';
+import '../widgets/utils_widgets/delete_confirmation_dialog.dart';
 
 class CategoryPage extends StatefulWidget {
   const CategoryPage({super.key});
@@ -48,9 +49,16 @@ class _CategoryPageState extends State<CategoryPage> {
     _showCategoryFormDialog(category: category);
   }
 
-  void _deleteCategory(CategoryModel category) async {
+  Future<void> _deleteCategory(CategoryModel category) async {
     await _controller.deleteCategory(category.id);
     _loadCategories();
+  }
+
+  Future<bool?> _showDeleteConfirmationDialog() async {
+    return DeleteConfirmationDialog.show(
+      context,
+      entityName: 'category',
+    );
   }
 
   @override
@@ -71,6 +79,7 @@ class _CategoryPageState extends State<CategoryPage> {
               categories: snapshot.data!,
               onEdit: _editCategory,
               onDelete: _deleteCategory,
+              showDeleteConfirmationDialog: _showDeleteConfirmationDialog,
             );
           }
         },
