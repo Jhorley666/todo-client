@@ -54,9 +54,35 @@ class _TaskPageState extends State<TaskPage> {
     _showTaskFormDialog(task: task);
   }
 
-  void _deleteTask(TaskModel task) async {
+  Future<void> _deleteTask(TaskModel task) async {
     await _taskController.deleteTask(task.taskId);
     _loadTasks();
+  }
+
+  Future<bool?> _showDeleteConfirmationDialog() async {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Task Deletion'),
+        content: const Text(
+          'Are you sure you want to permanently delete this task? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _showTaskFormDialog({TaskModel? task}) async {
@@ -175,6 +201,7 @@ class _TaskPageState extends State<TaskPage> {
               tasks: snapshot.data!,
               onEdit: _editTask,
               onDelete: _deleteTask,
+              showDeleteConfirmationDialog: _showDeleteConfirmationDialog,
             );
           }
         },

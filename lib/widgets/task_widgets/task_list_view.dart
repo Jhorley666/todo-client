@@ -5,12 +5,14 @@ class TaskListView extends StatelessWidget {
   final List<TaskModel> tasks;
   final void Function(TaskModel) onEdit;
   final void Function(TaskModel) onDelete;
+  final Future<bool?> Function() showDeleteConfirmationDialog;
 
   const TaskListView({
     super.key,
     required this.tasks,
     required this.onEdit,
     required this.onDelete,
+    required this.showDeleteConfirmationDialog,
   });
 
   @override
@@ -31,7 +33,12 @@ class TaskListView extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: const Icon(Icons.delete, color: Colors.white),
           ),
-          onDismissed: (direction) => onDelete(task),
+          confirmDismiss: (direction) async {
+            return await showDeleteConfirmationDialog();
+          },
+          onDismissed: (direction) {
+            onDelete(task);
+          },
           child: ListTile(
             title: Text(
               task.title,
