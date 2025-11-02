@@ -1,30 +1,17 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/task_status_model.dart';
+import 'base_http_service.dart';
 
 class TaskStatusService {
-  static const String baseUrl = 'http://192.168.100.9:8587/api/v1/status';
-  
-  
-  Future<Map<String, String>> _getHeaders() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('jwt_token');
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ${token ?? ''}' ,
-    };
-  }
+  final BaseHttpService _httpService = BaseHttpService();
 
   Future<List<TaskStatusModel>> fetchTaskStatuses() async {
-    final headers = await _getHeaders();
-    final response = await http.get(Uri.parse(baseUrl), headers: headers);
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
+    try {
+      final response = await _httpService.get('/status');
+      final List<dynamic> data = response.data;
       return data.map((json) => TaskStatusModel.fromJson(json)).toList();
-    } else {
-      throw Exception('Error al obtener los estados de las tareas');
+    } catch (e) {
+      // Include the actual error message for debugging
+      throw Exception('Error al obtener los estados de las tareas: ${e.toString()}');
     }
   }
-
 }

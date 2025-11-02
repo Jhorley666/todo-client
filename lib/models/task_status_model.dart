@@ -1,5 +1,5 @@
 class TaskStatusModel {
-  final String id;
+  final int id;
   final String name;
 
   TaskStatusModel({
@@ -9,7 +9,7 @@ class TaskStatusModel {
 
   factory TaskStatusModel.fromJson(Map<String, dynamic> json) {
     return TaskStatusModel(
-      id: json['id'] as String,
+      id: json['statusId'] as int,
       name: json['name'] as String,
     );
   }

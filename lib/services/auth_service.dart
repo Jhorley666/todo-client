@@ -1,29 +1,30 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'base_http_service.dart';
 
 class AuthService {
-  static const String baseUrl = 'http://192.168.100.9:8587/api/v1';
+  final BaseHttpService _httpService = BaseHttpService();
 
   Future<bool> login(String username, String password) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'username': username,
-        'password': password,
-      }),
-    );
+    try {
+      final response = await _httpService.post(
+        '/auth/login',
+        data: {
+          'username': username,
+          'password': password,
+        },
+      );
 
-    if (response.statusCode == 200) {
-      final body = json.decode(response.body);
-      final token = body['token'];
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('jwt_token', token);
-      return true;
+      if (response.statusCode == 200) {
+        final token = response.data['token'];
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('jwt_token', token);
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      return false;
     }
-
-    return false;
   }
 
   Future<void> logout() async {
@@ -37,20 +38,19 @@ class AuthService {
   }
 
   Future<bool> register(String username, String password, String email) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/register'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'username': username,
-        'email': email,
-        'password': password,
-      }),
-    );
+    try {
+      final response = await _httpService.post(
+        '/auth/register',
+        data: {
+          'username': username,
+          'email': email,
+          'password': password,
+        },
+      );
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return true;
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      return false;
     }
-
-    return false;
   }
 }

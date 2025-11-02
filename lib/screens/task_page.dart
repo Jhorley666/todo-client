@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:todo_client/controllers/category_controller.dart';
 import '../models/task_model.dart';
+import '../models/task_status_model.dart';
 import '../controllers/task_controller.dart';
+import '../controllers/task_status_controller.dart';
 import '../services/category_service.dart';
 import '../widgets/task_widgets/task_list_view.dart';
 import '../widgets/task_widgets/task_form_dialog.dart';
@@ -17,6 +19,7 @@ class TaskPage extends StatefulWidget {
 class _TaskPageState extends State<TaskPage> {
   final TaskController _taskController = TaskController();
   final CategoryController _categoryController = CategoryController();
+  final TaskStatusController _taskStatusController = TaskStatusController();
 
   late Future<List<TaskModel>> _tasksFuture;
 
@@ -57,55 +60,101 @@ class _TaskPageState extends State<TaskPage> {
   }
 
   Future<void> _showTaskFormDialog({TaskModel? task}) async {
-    // 1. Obtener categorías del servicio
-    final categories = await CategoryService().fetchCategories();
+    try {
+      // 1. Obtener categorías del servicio
+      final categories = await CategoryService().fetchCategories();
 
-    // 2. Convertir a DropdownMenuItem<int>
-    final categoryItems = categories
-        .map((cat) => DropdownMenuItem<int>(
-              value: cat.id,
-              child: Text(cat.name),
-            ))
-        .toList();
+      // 2. Convertir a DropdownMenuItem<int>
+      final categoryItems = categories
+          .map((cat) => DropdownMenuItem<int>(
+                value: cat.id,
+                child: Text(
+                  cat.name,
+                  overflow: TextOverflow.visible,
+                  maxLines: null,
+                ),
+              ))
+          .toList();
 
-    await showDialog(
-      // ignore: use_build_context_synchronously
-      context: context,
-      builder: (context) => TaskFormDialog(
-        task: task,
-        categoryItems: categoryItems,
-        onSubmit: ({
-          required String title,
-          required String description,
-          required String priority,
-          required int categoryId,
-          required int statusId,
-          required DateTime dueDate,
-        }) async {
-          if (task == null) {
-            await _taskController.addTask(
-              title: title,
-              description: description,
-              priority: priority,
-              categoryId: categoryId,
-              statusId: statusId,
-              dueDate: dueDate,
-            );
-          } else {
-            await _taskController.updateTask(
-              id: task.taskId,
-              title: title,
-              description: description,
-              priority: priority,
-              categoryId: categoryId,
-              statusId: statusId,
-              dueDate: dueDate,
-            );
-          }
-          _loadTasks();
-        },
-      ),
-    );
+      // 3. Obtener estados de tareas del servicio
+      List<TaskStatusModel> taskStatuses;
+      try {
+        taskStatuses = await _taskStatusController.fetchTaskStatuses();
+      } catch (e) {
+        // Show error dialog if statuses can't be fetched
+        if (!mounted) return;
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Error'),
+            content: Text('No se pudieron cargar los estados de las tareas.\n\nError: ${e.toString()}'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        builder: (context) => TaskFormDialog(
+          task: task,
+          categoryItems: categoryItems,
+          taskStatuses: taskStatuses,
+          onSubmit: ({
+            required String title,
+            required String description,
+            required String priority,
+            required int categoryId,
+            required int statusId,
+            required DateTime dueDate,
+          }) async {
+            if (task == null) {
+              await _taskController.addTask(
+                title: title,
+                description: description,
+                priority: priority,
+                categoryId: categoryId,
+                statusId: statusId,
+                dueDate: dueDate,
+              );
+            } else {
+              await _taskController.updateTask(
+                id: task.taskId,
+                title: title,
+                description: description,
+                priority: priority,
+                categoryId: categoryId,
+                statusId: statusId,
+                dueDate: dueDate,
+              );
+            }
+            _loadTasks();
+          },
+        ),
+      );
+    } catch (e) {
+      // Handle any other errors
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Error'),
+          content: Text('Error al abrir el formulario: ${e.toString()}'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   @override

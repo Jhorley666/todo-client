@@ -33,11 +33,35 @@ class TaskListView extends StatelessWidget {
           ),
           onDismissed: (direction) => onDelete(task),
           child: ListTile(
-            title: Text(task.title),
-            subtitle: Text(
-              'Prioridad: ${task.priority.name} | '
-              'Categoría: ${task.categoryName ?? "-"} | '
-              'Vence: ${task.dueDate != null ? task.dueDate!.toLocal().toString().split(' ')[0] : "-"}',
+            title: Text(
+              task.title,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                Chip(
+                  label: Text(task.priority.name),
+                  backgroundColor: _getPriorityColor(task.priority.name),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                  labelStyle: const TextStyle(fontSize: 12, color: Colors.white),
+                ),
+                if (task.categoryName != null)
+                  Chip(
+                    label: Text(task.categoryName!),
+                    backgroundColor: Colors.blue.shade100,
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                    labelStyle: TextStyle(fontSize: 12, color: Colors.blue.shade800),
+                  ),
+                if (task.dueDate != null)
+                  Chip(
+                    label: Text(task.dueDate!.toLocal().toString().split(' ')[0]),
+                    backgroundColor: Colors.grey.shade200,
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                    labelStyle: TextStyle(fontSize: 12, color: Colors.grey.shade800),
+                  ),
+              ],
             ),
             trailing: IconButton(
               icon: const Icon(Icons.edit),
@@ -47,5 +71,18 @@ class TaskListView extends StatelessWidget {
         );
       },
     );
+  }
+
+  Color _getPriorityColor(String priority) {
+    switch (priority.toLowerCase()) {
+      case 'low':
+        return Colors.green;
+      case 'medium':
+        return Colors.orange;
+      case 'high':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
   }
 }

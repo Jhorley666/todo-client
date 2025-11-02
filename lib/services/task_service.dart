@@ -1,61 +1,61 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/task_model.dart';
 import 'package:intl/intl.dart';
+import 'base_http_service.dart';
 
 class TaskService {
-  static const String baseUrl = 'http://192.168.100.9:8587/api/v1/tasks';
-
-  Future<Map<String, String>> _getHeaders() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('jwt_token');
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ${token ?? ''}' ,
-    };
-  }
+  final BaseHttpService _httpService = BaseHttpService();
 
   Future<List<TaskModel>> fetchTasks() async {
-    final headers = await _getHeaders();
-    final response = await http.get(Uri.parse(baseUrl), headers: headers);
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
+    try {
+      final response = await _httpService.get('/tasks');
+      final List<dynamic> data = response.data;
       return data.map((json) => TaskModel.fromJson(json)).toList();
-    } else {
+    } catch (e) {
       throw Exception('Error al obtener tareas');
     }
   }
 
   Future<void> addTask(String title, String description, String priority, 
   int categoryId, int statusId, DateTime dueDate) async {
-    final headers = await _getHeaders();
-        final now = DateTime.now();
-    final formattedDate = DateFormat('yyyy-MM-dd').format(dueDate);
-    final nowFormattedDate = DateFormat('yyyy-MM-dd').format(now);
-    await http.post(
-      Uri.parse(baseUrl),
-      headers: headers,
-      body: json.encode({'title': title, 'description': description, 
-      'priority': priority, 'categoryId': categoryId, 'statusId': statusId, 
-      'createdAt': nowFormattedDate,
-      'updatedAt': nowFormattedDate,
-      'dueDate': formattedDate}),
-    );
+    try {
+      final now = DateTime.now();
+      final formattedDate = DateFormat('yyyy-MM-dd').format(dueDate);
+      final nowFormattedDate = DateFormat('yyyy-MM-dd').format(now);
+      await _httpService.post(
+        '/tasks',
+        data: {
+          'title': title, 
+          'description': description, 
+          'priority': priority, 
+          'categoryId': categoryId, 
+          'statusId': statusId, 
+          'createdAt': nowFormattedDate,
+          'updatedAt': nowFormattedDate,
+          'dueDate': formattedDate
+        },
+      );
+    } catch (e) {
+      throw Exception('Error al agregar tarea');
+    }
   }
 
   Future<void> deleteTask(int id) async {
-    final headers = await _getHeaders();
-    await http.delete(Uri.parse('$baseUrl/$id'), headers: headers);
+    try {
+      await _httpService.delete('/tasks/$id');
+    } catch (e) {
+      throw Exception('Error al eliminar tarea');
+    }
   }
 
   Future<void> toggleTask(int id, bool completed) async {
-    final headers = await _getHeaders();
-    await http.put(
-      Uri.parse('$baseUrl/$id'),
-      headers: headers,
-      body: json.encode({'completed': completed}),
-    );
+    try {
+      await _httpService.put(
+        '/tasks/$id',
+        data: {'completed': completed},
+      );
+    } catch (e) {
+      throw Exception('Error al actualizar estado de tarea');
+    }
   }
 
   Future<void> updateTask(
@@ -67,22 +67,24 @@ class TaskService {
     int statusId,
     DateTime dueDate,
   ) async {
-    final headers = await _getHeaders();
-    final now = DateTime.now();
-    final formattedDate = DateFormat('yyyy-MM-dd').format(dueDate);
-    final nowFormattedDate = DateFormat('yyyy-MM-dd').format(now);
-    await http.put(
-      Uri.parse('$baseUrl/$id'),
-      headers: headers,
-      body: json.encode({
-        'title': title,
-        'description': description,
-        'priority': priority,
-        'categoryId': categoryId,
-        'statusId': statusId,
-        'dueDate': formattedDate,
-        'updatedAt': nowFormattedDate,
-      }),
-    );
+    try {
+      final now = DateTime.now();
+      final formattedDate = DateFormat('yyyy-MM-dd').format(dueDate);
+      final nowFormattedDate = DateFormat('yyyy-MM-dd').format(now);
+      await _httpService.put(
+        '/tasks/$id',
+        data: {
+          'title': title,
+          'description': description,
+          'priority': priority,
+          'categoryId': categoryId,
+          'statusId': statusId,
+          'dueDate': formattedDate,
+          'updatedAt': nowFormattedDate,
+        },
+      );
+    } catch (e) {
+      throw Exception('Error al actualizar tarea');
+    }
   }
 }
