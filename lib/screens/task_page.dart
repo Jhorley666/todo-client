@@ -8,6 +8,8 @@ import '../services/category_service.dart';
 import '../widgets/task_widgets/task_list_view.dart';
 import '../widgets/task_widgets/task_form_dialog.dart';
 import '../widgets/utils_widgets/delete_confirmation_dialog.dart';
+import '../widgets/utils_widgets/task_progress_widget.dart';
+import '../models/task_statistics_model.dart';
 import 'category_page.dart'; // Asegúrate de importar la página de categorías
 
 class TaskPage extends StatefulWidget {
@@ -23,16 +25,24 @@ class _TaskPageState extends State<TaskPage> {
   final TaskStatusController _taskStatusController = TaskStatusController();
 
   late Future<List<TaskModel>> _tasksFuture;
+  late Future<TaskStatistics> _taskStatisticsFuture;
 
   @override
   void initState() {
     super.initState();
     _loadTasks();
+    _loadTaskStatistics();
   }
 
   void _loadTasks() {
     setState(() {
       _tasksFuture = _loadTasksWithCategoryNames();
+    });
+  }
+
+  void _loadTaskStatistics() {
+    setState(() {
+      _taskStatisticsFuture = _taskController.fetchTaskStatistics();
     });
   }
 
@@ -58,6 +68,7 @@ class _TaskPageState extends State<TaskPage> {
   Future<void> _deleteTask(TaskModel task) async {
     await _taskController.deleteTask(task.taskId);
     _loadTasks();
+    _loadTaskStatistics();
   }
 
   Future<bool?> _showDeleteConfirmationDialog() async {
@@ -143,6 +154,7 @@ class _TaskPageState extends State<TaskPage> {
               );
             }
             _loadTasks();
+            _loadTaskStatistics();
           },
         ),
       );
@@ -169,24 +181,58 @@ class _TaskPageState extends State<TaskPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Tasks')),
-      body: FutureBuilder<List<TaskModel>>(
-        future: _tasksFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No tasks available'));
-          } else {
-            return TaskListView(
-              tasks: snapshot.data!,
-              onEdit: _editTask,
-              onDelete: _deleteTask,
-              showDeleteConfirmationDialog: _showDeleteConfirmationDialog,
-            );
-          }
-        },
+      body: Column(
+        children: [
+          // Progress widget section
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Card(
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Task Progress',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TaskProgressWidgetWithStates(
+                      statisticsFuture: _taskStatisticsFuture,
+                      size: 120.0,
+                      strokeWidth: 10.0,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Task list section
+          Expanded(
+            child: FutureBuilder<List<TaskModel>>(
+              future: _tasksFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('No tasks available'));
+                } else {
+                  return TaskListView(
+                    tasks: snapshot.data!,
+                    onEdit: _editTask,
+                    onDelete: _deleteTask,
+                    showDeleteConfirmationDialog: _showDeleteConfirmationDialog,
+                  );
+                }
+              },
+            ),
+          ),
+        ],
       ),
       drawer: Drawer(
         child: ListView(

@@ -1,9 +1,13 @@
 import '../models/task_model.dart';
+import '../models/task_statistics_model.dart';
+import '../models/task_status_model.dart';
 import 'package:intl/intl.dart';
 import 'base_http_service.dart';
+import 'task_status_service.dart';
 
 class TaskService {
   final BaseHttpService _httpService = BaseHttpService();
+  final TaskStatusService _taskStatusService = TaskStatusService();
 
   Future<List<TaskModel>> fetchTasks() async {
     try {
@@ -85,6 +89,46 @@ class TaskService {
       );
     } catch (e) {
       throw Exception('Error al actualizar tarea');
+    }
+  }
+
+  /// Fetches task statistics including total tasks and completed tasks count
+  /// A task is considered completed if its status name is "Completed" (case-insensitive)
+  Future<TaskStatistics> fetchTaskStatistics() async {
+    try {
+      // Fetch all tasks and statuses in parallel
+      final tasksFuture = fetchTasks();
+      final statusesFuture = _taskStatusService.fetchTaskStatuses();
+      
+      final tasks = await tasksFuture;
+      final statuses = await statusesFuture;
+      
+      // Find the "Completed" status ID (case-insensitive)
+      final completedStatusList = statuses.where(
+        (status) => status.name.toLowerCase() == 'completed',
+      ).toList();
+      
+      // If no "Completed" status exists, return statistics with 0 completed
+      if (completedStatusList.isEmpty) {
+        return TaskStatistics(
+          totalTasks: tasks.length,
+          completedTasks: 0,
+        );
+      }
+      
+      final completedStatusId = completedStatusList.first.id;
+      
+      // Count completed tasks
+      final completedCount = tasks.where(
+        (task) => task.statusId == completedStatusId,
+      ).length;
+      
+      return TaskStatistics(
+        totalTasks: tasks.length,
+        completedTasks: completedCount,
+      );
+    } catch (e) {
+      throw Exception('Error al obtener estadísticas de tareas: ${e.toString()}');
     }
   }
 }

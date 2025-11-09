@@ -1,4 +1,5 @@
 import '../models/task_model.dart';
+import '../models/task_statistics_model.dart';
 import '../services/task_service.dart';
 
 class TaskController {
@@ -48,5 +49,9 @@ class TaskController {
 
   Future<void> deleteTask(int id) {
     return _taskService.deleteTask(id);
+  }
+
+  Future<TaskStatistics> fetchTaskStatistics() {
+    return _taskService.fetchTaskStatistics();
   }
 }
