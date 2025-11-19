@@ -4,7 +4,9 @@ import '../models/task_model.dart';
 import '../models/task_status_model.dart';
 import '../controllers/task_controller.dart';
 import '../controllers/task_status_controller.dart';
+import '../controllers/priority_controller.dart';
 import '../services/category_service.dart';
+import '../services/priority_service.dart';
 import '../widgets/task_widgets/task_list_view.dart';
 import '../widgets/task_widgets/task_form_dialog.dart';
 import '../widgets/utils_widgets/delete_confirmation_dialog.dart';
@@ -23,6 +25,7 @@ class _TaskPageState extends State<TaskPage> {
   final TaskController _taskController = TaskController();
   final CategoryController _categoryController = CategoryController();
   final TaskStatusController _taskStatusController = TaskStatusController();
+  final PriorityController _priorityController = PriorityController();
 
   late Future<List<TaskModel>> _tasksFuture;
   late Future<TaskStatistics> _taskStatisticsFuture;
@@ -49,13 +52,19 @@ class _TaskPageState extends State<TaskPage> {
   Future<List<TaskModel>> _loadTasksWithCategoryNames() async {
     final tasks = await _taskController.fetchTasks();
     final categories = await _categoryController.fetchCategories();
+    final priorities = await _priorityController.fetchPriorities();
 
     final categoryMap = {
       for (var category in categories) category.id: category.name
     };
 
+    final priorityMap = {
+      for (var priority in priorities) priority.priorityId: priority.priorityName
+    };
+
     for (var task in tasks) {
       task.categoryName = categoryMap[task.categoryId] ?? 'Unknown';
+      task.priorityName = priorityMap[task.priorityId] ?? 'Unknown';
     }
 
     return tasks;
@@ -95,7 +104,22 @@ class _TaskPageState extends State<TaskPage> {
               ))
           .toList();
 
-      // 3. Obtener estados de tareas del servicio
+      // 3. Obtener prioridades del servicio
+      final priorities = await PriorityService().fetchPriorities();
+
+      // 4. Convertir a DropdownMenuItem<int>
+      final priorityItems = priorities
+          .map((priority) => DropdownMenuItem<int>(
+                value: priority.priorityId,
+                child: Text(
+                  priority.priorityName,
+                  overflow: TextOverflow.visible,
+                  maxLines: null,
+                ),
+              ))
+          .toList();
+
+      // 5. Obtener estados de tareas del servicio
       List<TaskStatusModel> taskStatuses;
       try {
         taskStatuses = await _taskStatusController.fetchTaskStatuses();
@@ -124,11 +148,12 @@ class _TaskPageState extends State<TaskPage> {
         builder: (context) => TaskFormDialog(
           task: task,
           categoryItems: categoryItems,
+          priorityItems: priorityItems,
           taskStatuses: taskStatuses,
           onSubmit: ({
             required String title,
             required String description,
-            required String priority,
+            required int priorityId,
             required int categoryId,
             required int statusId,
             required DateTime dueDate,
@@ -137,7 +162,7 @@ class _TaskPageState extends State<TaskPage> {
               await _taskController.addTask(
                 title: title,
                 description: description,
-                priority: priority,
+                priorityId: priorityId,
                 categoryId: categoryId,
                 statusId: statusId,
                 dueDate: dueDate,
@@ -147,7 +172,7 @@ class _TaskPageState extends State<TaskPage> {
                 id: task.taskId,
                 title: title,
                 description: description,
-                priority: priority,
+                priorityId: priorityId,
                 categoryId: categoryId,
                 statusId: statusId,
                 dueDate: dueDate,

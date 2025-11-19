@@ -48,12 +48,13 @@ class TaskListView extends StatelessWidget {
               spacing: 6,
               runSpacing: 4,
               children: [
-                Chip(
-                  label: Text(task.priority.name),
-                  backgroundColor: _getPriorityColor(task.priority.name),
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-                  labelStyle: const TextStyle(fontSize: 12, color: Colors.white),
-                ),
+                if (task.priorityName != null)
+                  Chip(
+                    label: Text(task.priorityName!),
+                    backgroundColor: _getPriorityColor(task.priorityId),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                    labelStyle: const TextStyle(fontSize: 12, color: Colors.white),
+                  ),
                 if (task.categoryName != null)
                   Chip(
                     label: Text(task.categoryName!),
@@ -80,13 +81,13 @@ class TaskListView extends StatelessWidget {
     );
   }
 
-  Color _getPriorityColor(String priority) {
-    switch (priority.toLowerCase()) {
-      case 'low':
+  Color _getPriorityColor(int priorityId) {
+    switch (priorityId) {
+      case 1:
         return Colors.green;
-      case 'medium':
+      case 2:
         return Colors.orange;
-      case 'high':
+      case 3:
         return Colors.red;
       default:
         return Colors.grey;

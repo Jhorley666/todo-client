@@ -5,11 +5,12 @@ import '../../models/task_status_model.dart';
 class TaskFormDialog extends StatefulWidget {
   final TaskModel? task;
   final List<DropdownMenuItem<int>> categoryItems;
+  final List<DropdownMenuItem<int>> priorityItems;
   final List<TaskStatusModel> taskStatuses;
   final void Function({
     required String title,
     required String description,
-    required String priority,
+    required int priorityId,
     required int categoryId,
     required int statusId,
     required DateTime dueDate,
@@ -19,6 +20,7 @@ class TaskFormDialog extends StatefulWidget {
     super.key,
     this.task,
     required this.categoryItems,
+    required this.priorityItems,
     required this.taskStatuses,
     required this.onSubmit,
   });
@@ -31,7 +33,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _titleController;
   late TextEditingController _descController;
-  late String _priority;
+  late int _priorityId;
   late int? _categoryId;
   late TaskStatusModel? _selectedStatus;
   late DateTime _dueDate;
@@ -43,7 +45,20 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
     _isEditing = widget.task != null;
     _titleController = TextEditingController(text: widget.task?.title ?? '');
     _descController = TextEditingController(text: widget.task?.description ?? '');
-    _priority = widget.task?.priority.name ?? 'Low';
+    
+    // Initialize priority: use task's priority if editing, otherwise use first available
+    // Filter out possible null values so we end up with a List<int>
+    final priorityValues = widget.priorityItems
+        .map((item) => item.value)
+        .whereType<int>()
+        .toList();
+    if (widget.task?.priorityId != null && priorityValues.contains(widget.task!.priorityId)) {
+      _priorityId = widget.task!.priorityId;
+    } else if (priorityValues.isNotEmpty) {
+      _priorityId = priorityValues.first;
+    } else {
+      _priorityId = 1; // fallback
+    }
 
     // Obtén todos los valores posibles de categoría
     final categoryValues = widget.categoryItems.map((item) => item.value).toList();
@@ -101,13 +116,14 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                 controller: _descController,
                 decoration: const InputDecoration(labelText: 'Descripción'),
               ),
-              DropdownButtonFormField<String>(
-                value: _priority,
-                items: ['Low', 'Medium', 'High']
-                    .map((p) => DropdownMenuItem(value: p, child: Text(p)))
-                    .toList(),
-                onChanged: (v) => setState(() => _priority = v!),
+              DropdownButtonFormField<int>(
+                value: _priorityId,
+                items: widget.priorityItems,
+                itemHeight: null,
+                onChanged: (v) => setState(() => _priorityId = v!),
                 decoration: const InputDecoration(labelText: 'Prioridad'),
+                validator: (v) => v == null ? 'Seleccione una prioridad' : null,
+                isExpanded: true,
               ),
               DropdownButtonFormField<int>(
                 value: _categoryId,
@@ -168,7 +184,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
               widget.onSubmit(
                 title: _titleController.text,
                 description: _descController.text,
-                priority: _priority,
+                priorityId: _priorityId,
                 categoryId: _categoryId!,
                 statusId: statusId,
                 dueDate: _dueDate,

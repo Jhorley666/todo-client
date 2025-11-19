@@ -19,7 +19,7 @@ class TaskService {
     }
   }
 
-  Future<void> addTask(String title, String description, String priority, 
+  Future<void> addTask(String title, String description, int priorityId, 
   int categoryId, int statusId, DateTime dueDate) async {
     try {
       final now = DateTime.now();
@@ -30,7 +30,7 @@ class TaskService {
         data: {
           'title': title, 
           'description': description, 
-          'priority': priority, 
+          'priorityId': priorityId, 
           'categoryId': categoryId, 
           'statusId': statusId, 
           'createdAt': nowFormattedDate,
@@ -66,7 +66,7 @@ class TaskService {
     int id,
     String title,
     String description,
-    String priority,
+    int priorityId,
     int categoryId,
     int statusId,
     DateTime dueDate,
@@ -80,7 +80,7 @@ class TaskService {
         data: {
           'title': title,
           'description': description,
-          'priority': priority,
+          'priorityId': priorityId,
           'categoryId': categoryId,
           'statusId': statusId,
           'dueDate': formattedDate,

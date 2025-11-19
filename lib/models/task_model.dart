@@ -1,5 +1,3 @@
-enum Priority { Low, Medium, High }
-
 class TaskModel {
   final int taskId;
   final int userId;
@@ -7,11 +5,12 @@ class TaskModel {
   final int statusId;
   final String title;
   final String? description;
-  final Priority priority;
+  final int priorityId;
   final DateTime? dueDate;
   final DateTime createdAt;
   final DateTime updatedAt;
   String? categoryName;
+  String? priorityName;
 
   TaskModel({
     required this.taskId,
@@ -20,11 +19,12 @@ class TaskModel {
     required this.statusId,
     required this.title,
     this.description,
-    required this.priority,
+    required this.priorityId,
     this.dueDate,
     required this.createdAt,
     required this.updatedAt,
-    this.categoryName
+    this.categoryName,
+    this.priorityName,
   });
 
   factory TaskModel.fromJson(Map<String, dynamic> json) => TaskModel(
@@ -34,9 +34,7 @@ class TaskModel {
         statusId: json['statusId'],
         title: json['title'],
         description: json['description'],
-        priority: Priority.values.firstWhere(
-          (e) => e.name.toLowerCase() == json['priority'].toString().toLowerCase(),
-        ),
+        priorityId: json['priorityId'],
         dueDate: json['dueDate'] != null ? DateTime.parse(json['dueDate']) : null,
         createdAt: DateTime.parse(json['createdAt']),
         updatedAt: DateTime.parse(json['updatedAt']),
