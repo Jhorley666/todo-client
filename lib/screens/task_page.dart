@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:todo_client/controllers/category_controller.dart';
 import '../models/task_model.dart';
@@ -5,12 +6,14 @@ import '../models/task_status_model.dart';
 import '../controllers/task_controller.dart';
 import '../controllers/task_status_controller.dart';
 import '../controllers/priority_controller.dart';
+import '../controllers/task_time_priority_controller.dart';
 import '../services/category_service.dart';
 import '../services/priority_service.dart';
 import '../widgets/task_widgets/task_list_view.dart';
 import '../widgets/task_widgets/task_form_dialog.dart';
 import '../widgets/utils_widgets/delete_confirmation_dialog.dart';
 import '../widgets/utils_widgets/task_progress_widget.dart';
+import '../widgets/utils_widgets/task_timer_widget.dart';
 import '../models/task_statistics_model.dart';
 import 'category_page.dart'; // Asegúrate de importar la página de categorías
 
@@ -26,15 +29,19 @@ class _TaskPageState extends State<TaskPage> {
   final CategoryController _categoryController = CategoryController();
   final TaskStatusController _taskStatusController = TaskStatusController();
   final PriorityController _priorityController = PriorityController();
+  final TaskTimePriorityController _taskTimePriorityController = TaskTimePriorityController();
 
   late Future<List<TaskModel>> _tasksFuture;
   late Future<TaskStatistics> _taskStatisticsFuture;
+  Duration _totalTimerDuration = Duration.zero;
+  final List<int> _processedCompletedTaskIds = [];
 
   @override
   void initState() {
     super.initState();
     _loadTasks();
     _loadTaskStatistics();
+    _calculateTotalDuration();
   }
 
   void _loadTasks() {
@@ -67,7 +74,118 @@ class _TaskPageState extends State<TaskPage> {
       task.priorityName = priorityMap[task.priorityId] ?? 'Unknown';
     }
 
+    // Calculate total duration after loading tasks
+    _calculateTotalDuration();
+    
     return tasks;
+  }
+
+  Future<void> _calculateTotalDuration() async {
+    try {
+      final tasks = await _taskController.fetchTasks();
+      final statuses = await _taskStatusController.fetchTaskStatuses();
+      
+      // Find the "Completed" or "Done" status ID (case-insensitive)
+      final completedStatus = statuses.firstWhere(
+        (status) => status.name.toLowerCase() == 'completed' || 
+                    status.name.toLowerCase() == 'done',
+        orElse: () => statuses.first, // fallback to first status if not found
+      );
+
+      Duration totalDuration = Duration.zero;
+      _processedCompletedTaskIds.clear();
+
+      for (var task in tasks) {
+        if (task.statusId == completedStatus.id && 
+            !_processedCompletedTaskIds.contains(task.taskId)) {
+          try {
+            final taskTimePriority = await _taskTimePriorityController
+                .getTaskTimePriorityByPriorityId(task.priorityId);
+            
+            // Extract time from DateTime (the time field represents the duration)
+            // Since it's stored as DateTime, we need to extract hours, minutes, seconds
+            final time = taskTimePriority.time;
+            // Extract duration from time field (treat as time of day representing duration)
+            // Calculate difference from midnight to get the actual duration
+            final midnight = DateTime(time.year, time.month, time.day);
+            final duration = time.difference(midnight);
+            
+            totalDuration += duration;
+            _processedCompletedTaskIds.add(task.taskId);
+          } catch (e) {
+            // If task time priority not found, skip this task
+            debugPrint('Error fetching task time priority for task ${task.taskId}: $e');
+          }
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _totalTimerDuration = totalDuration;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error calculating total duration: $e');
+    }
+  }
+
+  Future<void> _handleTaskStatusUpdate(
+    TaskModel? oldTask,
+    int newStatusId,
+    int priorityId,
+  ) async {
+    try {
+      final statuses = await _taskStatusController.fetchTaskStatuses();
+      final completedStatus = statuses.firstWhere(
+        (status) => status.name.toLowerCase() == 'completed' || 
+                    status.name.toLowerCase() == 'done',
+        orElse: () => statuses.first,
+      );
+
+      // Check if task status changed to "done"
+      if (newStatusId == completedStatus.id) {
+        int? taskIdToProcess;
+        
+        if (oldTask != null) {
+          // For updates, use the old task ID
+          taskIdToProcess = oldTask.taskId;
+        } else {
+          // For new tasks, get the latest task ID
+          final tasks = await _taskController.fetchTasks();
+          if (tasks.isNotEmpty) {
+            // Get the most recently created task (assuming it's the one just added)
+            tasks.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            taskIdToProcess = tasks.first.taskId;
+          }
+        }
+
+        if (taskIdToProcess != null && 
+            !_processedCompletedTaskIds.contains(taskIdToProcess)) {
+          try {
+            final taskTimePriority = await _taskTimePriorityController
+                .getTaskTimePriorityByPriorityId(priorityId);
+            
+            final time = taskTimePriority.time;
+            // Extract duration from time field (treat as time of day representing duration)
+            // Calculate difference from midnight to get the actual duration
+            final midnight = DateTime(time.year, time.month, time.day);
+            final duration = time.difference(midnight);
+
+            if (mounted) {
+              final int processedTaskId = taskIdToProcess;
+              setState(() {
+                _totalTimerDuration += duration;
+                _processedCompletedTaskIds.add(processedTaskId);
+              });
+            }
+          } catch (e) {
+            debugPrint('Error fetching task time priority: $e');
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error handling task status update: $e');
+    }
   } 
   
   void _editTask(TaskModel task) {
@@ -158,6 +276,7 @@ class _TaskPageState extends State<TaskPage> {
             required int statusId,
             required DateTime dueDate,
           }) async {
+            final oldStatusId = task?.statusId;
             if (task == null) {
               await _taskController.addTask(
                 title: title,
@@ -167,6 +286,8 @@ class _TaskPageState extends State<TaskPage> {
                 statusId: statusId,
                 dueDate: dueDate,
               );
+              // If new task is created with "done" status, handle it
+              await _handleTaskStatusUpdate(null, statusId, priorityId);
             } else {
               await _taskController.updateTask(
                 id: task.taskId,
@@ -177,6 +298,10 @@ class _TaskPageState extends State<TaskPage> {
                 statusId: statusId,
                 dueDate: dueDate,
               );
+              // Check if status changed to done
+              if (oldStatusId != statusId) {
+                await _handleTaskStatusUpdate(task, statusId, priorityId);
+              }
             }
             _loadTasks();
             _loadTaskStatistics();
@@ -234,6 +359,18 @@ class _TaskPageState extends State<TaskPage> {
                 ),
               ),
             ),
+          ),
+          // Timer widget section
+          TaskTimerWidget(
+            totalDuration: _totalTimerDuration,
+            onTimerComplete: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Timer completed!'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
           ),
           // Task list section
           Expanded(
