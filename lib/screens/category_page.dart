@@ -4,6 +4,7 @@ import '../controllers/category_controller.dart';
 import '../widgets/category_widgets/category_list_view.dart';
 import '../widgets/category_widgets/category_form_dialog.dart';
 import '../widgets/utils_widgets/delete_confirmation_dialog.dart';
+import '../layouts/base_layout.dart';
 
 class CategoryPage extends StatefulWidget {
   const CategoryPage({super.key});
@@ -63,31 +64,33 @@ class _CategoryPageState extends State<CategoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Categorías')),
-      body: FutureBuilder<List<CategoryModel>>(
-        future: _categoriesFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No hay categorías disponibles'));
-          } else {
-            return CategoryListView(
-              categories: snapshot.data!,
-              onEdit: _editCategory,
-              onDelete: _deleteCategory,
-              showDeleteConfirmationDialog: _showDeleteConfirmationDialog,
-            );
-          }
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showCategoryFormDialog(),
-        child: const Icon(Icons.add),
-      ),
+    return BaseLayout(
+      title: "Categories",
+      child: Scaffold(
+        body: FutureBuilder<List<CategoryModel>>(
+          future: _categoriesFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return const Center(child: Text('No hay categorías disponibles'));
+            } else {
+              return CategoryListView(
+                categories: snapshot.data!,
+                onEdit: _editCategory,
+                onDelete: _deleteCategory,
+                showDeleteConfirmationDialog: _showDeleteConfirmationDialog,
+              );
+            }
+          },
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => _showCategoryFormDialog(),
+          child: const Icon(Icons.add),
+        ),
+      )
     );
   }
 }

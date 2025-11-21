@@ -15,7 +15,8 @@ import '../widgets/utils_widgets/delete_confirmation_dialog.dart';
 import '../widgets/utils_widgets/task_progress_widget.dart';
 import '../widgets/utils_widgets/task_timer_widget.dart';
 import '../models/task_statistics_model.dart';
-import 'category_page.dart'; // Asegúrate de importar la página de categorías
+import 'category_page.dart';
+import '../layouts/base_layout.dart';
 
 class TaskPage extends StatefulWidget {
   const TaskPage({super.key});
@@ -329,100 +330,79 @@ class _TaskPageState extends State<TaskPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Tasks')),
-      body: Column(
-        children: [
-          // Progress widget section
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Card(
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    const Text(
-                      'Task Progress',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+    return BaseLayout(
+      title: "Tasks",
+      child: Scaffold(
+        body: Column(
+          children: [
+            // Progress widget section
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Card(
+                elevation: 2,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Task Progress',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    TaskProgressWidgetWithStates(
-                      statisticsFuture: _taskStatisticsFuture,
-                      size: 120.0,
-                      strokeWidth: 10.0,
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      TaskProgressWidgetWithStates(
+                        statisticsFuture: _taskStatisticsFuture,
+                        size: 120.0,
+                        strokeWidth: 10.0,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-          // Timer widget section
-          TaskTimerWidget(
-            totalDuration: _totalTimerDuration,
-            onTimerComplete: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Timer completed!'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
-          ),
-          // Task list section
-          Expanded(
-            child: FutureBuilder<List<TaskModel>>(
-              future: _tasksFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('No tasks available'));
-                } else {
-                  return TaskListView(
-                    tasks: snapshot.data!,
-                    onEdit: _editTask,
-                    onDelete: _deleteTask,
-                    showDeleteConfirmationDialog: _showDeleteConfirmationDialog,
-                  );
-                }
-              },
-            ),
-          ),
-        ],
-      ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.blue),
-              child: Text('Menú', style: TextStyle(color: Colors.white, fontSize: 24)),
-            ),
-            ListTile(
-              leading: const Icon(Icons.category),
-              title: const Text('Categories'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const CategoryPage()),
+            // Timer widget section
+            TaskTimerWidget(
+              totalDuration: _totalTimerDuration,
+              onTimerComplete: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Timer completed!'),
+                    duration: Duration(seconds: 2),
+                  ),
                 );
               },
             ),
-            // Puedes agregar más opciones aquí si lo deseas
+            // Task list section
+            Expanded(
+              child: FutureBuilder<List<TaskModel>>(
+                future: _tasksFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(child: Text('No tasks available'));
+                  } else {
+                    return TaskListView(
+                      tasks: snapshot.data!,
+                      onEdit: _editTask,
+                      onDelete: _deleteTask,
+                      showDeleteConfirmationDialog: _showDeleteConfirmationDialog,
+                    );
+                  }
+                },
+              ),
+            ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showTaskFormDialog(),
-        child: const Icon(Icons.add),
-      ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => _showTaskFormDialog(),
+          child: const Icon(Icons.add),
+        ),
+      )
     );
   }
 }

@@ -3,9 +3,7 @@ import '../screens/login_page.dart';
 import '../screens/register_page.dart';
 
 class HomeController {
-  // Métodos para cargar información de la app
   Future<String> fetchBranding() async {
-    // TODO: Replace with actual branding fetch logic
     return "Branding info";
   }
 
