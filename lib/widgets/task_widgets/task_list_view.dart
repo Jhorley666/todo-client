@@ -8,6 +8,7 @@ class TaskListView extends StatefulWidget {
   final void Function(TaskModel) onEdit;
   final void Function(TaskModel) onDelete;
   final Future<bool?> Function() showDeleteConfirmationDialog;
+  final TaskStatusController? statusController;
 
   const TaskListView({
     super.key,
@@ -15,6 +16,7 @@ class TaskListView extends StatefulWidget {
     required this.onEdit,
     required this.onDelete,
     required this.showDeleteConfirmationDialog,
+    this.statusController,
   });
 
   @override
@@ -23,16 +25,14 @@ class TaskListView extends StatefulWidget {
 
 class _TaskListViewState extends State<TaskListView> with SingleTickerProviderStateMixin {
   late final AnimationController _waveController;
-  final TaskStatusController _statusController = TaskStatusController();
+  late final TaskStatusController _statusController;
   final Map<int, String> _statusMap = {};
 
   @override
   void initState() {
     super.initState();
-    _waveController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1600),
-    )..repeat();
+    _waveController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600))..repeat();
+    _statusController = widget.statusController ?? TaskStatusController();
     _loadStatuses();
   }
 
@@ -52,36 +52,8 @@ class _TaskListViewState extends State<TaskListView> with SingleTickerProviderSt
         }
       });
     } catch (_) {
-      // ignore errors, fallback names will be used
+      // fallback silent
     }
-  }
-
-  String _getStatusName(int? statusId) {
-    if (statusId == null) return 'Unknown';
-    final fromMap = _statusMap[statusId];
-    if (fromMap != null && fromMap.isNotEmpty) return fromMap;
-    switch (statusId) {
-      case 1:
-        return 'Pending';
-      case 2:
-        return 'In Progress';
-      case 3:
-        return 'Done';
-      default:
-        return 'Unknown';
-    }
-  }
-
-  bool _isInProgress(TaskModel t) {
-    final s = t.statusId;
-    final name = _statusMap[s]?.toLowerCase();
-    return s == 2 || (name != null && name.contains('progress'));
-  }
-
-  bool _isDone(TaskModel t) {
-    final s = t.statusId;
-    final name = _statusMap[s]?.toLowerCase();
-    return s == 3 || (name != null && (name.contains('done') || name.contains('completed')));
   }
 
   Map<int?, List<TaskModel>> _groupByStatus(List<TaskModel> tasks) {
@@ -93,129 +65,108 @@ class _TaskListViewState extends State<TaskListView> with SingleTickerProviderSt
     return map;
   }
 
+  String _statusName(int? id) {
+    if (id == null) return 'Unknown';
+    return _statusMap[id] ?? {
+          1: 'Pending',
+          2: 'In Progress',
+          3: 'Done',
+        }[id] ??
+        'Status $id';
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (widget.tasks.isEmpty) {
-      return const Center(child: Text('No tasks available'));
-    }
+    if (widget.tasks.isEmpty) return const Center(child: Text('No tasks available'));
 
     final grouped = _groupByStatus(widget.tasks);
-    final sortedKeys = grouped.keys.toList()
-      ..sort((a, b) {
-        final va = a ?? 999;
-        final vb = b ?? 999;
-        return va.compareTo(vb);
-      });
+    final keys = grouped.keys.toList()..sort((a, b) => (a ?? 999).compareTo(b ?? 999));
 
     return ListView(
       children: [
-        for (final statusKey in sortedKeys) ...[
-          _buildStatusHeader(statusKey, grouped[statusKey]!),
-          ...grouped[statusKey]!.map((task) => _buildTaskTile(context, task)).toList(),
-        ]
+        for (final statusKey in keys) ...[
+          StatusSection(
+            statusId: statusKey,
+            title: _statusName(statusKey),
+            tasks: grouped[statusKey]!,
+            waveController: _waveController,
+            onEdit: widget.onEdit,
+            onDelete: widget.onDelete,
+            showDeleteConfirmationDialog: widget.showDeleteConfirmationDialog,
+          ),
+        ],
       ],
     );
   }
+}
 
-  Widget _buildStatusHeader(int? statusKey, List<TaskModel> tasks) {
-    final title = _getStatusName(statusKey);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: Text(
-        title,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-      ),
+/// Header + list for a single status (SRP)
+class StatusSection extends StatelessWidget {
+  final int? statusId;
+  final String title;
+  final List<TaskModel> tasks;
+  final AnimationController waveController;
+  final void Function(TaskModel) onEdit;
+  final void Function(TaskModel) onDelete;
+  final Future<bool?> Function() showDeleteConfirmationDialog;
+
+  const StatusSection({
+    super.key,
+    required this.statusId,
+    required this.title,
+    required this.tasks,
+    required this.waveController,
+    required this.onEdit,
+    required this.onDelete,
+    required this.showDeleteConfirmationDialog,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+          child: Text(
+            title.toUpperCase(), // distinct style for status header
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.grey.shade700, letterSpacing: 0.6),
+          ),
+        ),
+        ...tasks.map((t) => TaskTile(
+              task: t,
+              waveController: waveController,
+              onEdit: onEdit,
+              onDelete: onDelete,
+              showDeleteConfirmationDialog: showDeleteConfirmationDialog,
+            )),
+      ],
     );
   }
+}
 
-  Widget _buildTaskTile(BuildContext context, TaskModel task) {
-    final isInProgress = _isInProgress(task);
-    final isDone = _isDone(task);
+/// Tile for a single task (SRP). Handles visual state: in-progress wave, done style, dismissible.
+class TaskTile extends StatelessWidget {
+  final TaskModel task;
+  final AnimationController waveController;
+  final void Function(TaskModel) onEdit;
+  final void Function(TaskModel) onDelete;
+  final Future<bool?> Function() showDeleteConfirmationDialog;
 
-    final titleWidget = Text(
-      task.title,
-      style: TextStyle(
-        fontWeight: FontWeight.bold,
-        decoration: isDone ? TextDecoration.lineThrough : TextDecoration.none,
-        color: isDone ? Colors.black.withOpacity(0.55) : Colors.black,
-      ),
-    );
+  const TaskTile({
+    super.key,
+    required this.task,
+    required this.waveController,
+    required this.onEdit,
+    required this.onDelete,
+    required this.showDeleteConfirmationDialog,
+  });
 
-    final tile = ListTile(
-      title: titleWidget,
-      subtitle: Wrap(
-        spacing: 6,
-        runSpacing: 4,
-        children: [
-          if ((task as dynamic).priorityName != null)
-            Chip(
-              label: Text((task as dynamic).priorityName as String),
-              backgroundColor: _getPriorityColor(task.priorityId),
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-              labelStyle: const TextStyle(fontSize: 12, color: Colors.white),
-            ),
-          if ((task as dynamic).categoryName != null)
-            Chip(
-              label: Text((task as dynamic).categoryName as String),
-              backgroundColor: Colors.blue.shade100,
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-              labelStyle: TextStyle(fontSize: 12, color: Colors.blue.shade800),
-            ),
-          if (task.dueDate != null)
-            Chip(
-              label: Text(task.dueDate!.toLocal().toString().split(' ')[0]),
-              backgroundColor: Colors.grey.shade200,
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-              labelStyle: TextStyle(fontSize: 12, color: Colors.grey.shade800),
-            ),
-        ],
-      ),
-      trailing: IconButton(
-        icon: const Icon(Icons.edit),
-        onPressed: () => widget.onEdit(task),
-      ),
-    );
+  // Use statusId only (TaskModel has no statusName)
+  bool get _isInProgress => task.statusId == 2;
+  bool get _isDone => task.statusId == 3;
 
-    final wrapped = Opacity(
-      opacity: isDone ? 0.55 : 1.0,
-      child: tile,
-    );
-
-    if (isInProgress && !isDone) {
-      return Dismissible(
-        key: ValueKey(task.taskId),
-        direction: DismissDirection.endToStart,
-        background: Container(
-          color: Colors.red,
-          alignment: Alignment.centerRight,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: const Icon(Icons.delete, color: Colors.white),
-        ),
-        confirmDismiss: (direction) async => await widget.showDeleteConfirmationDialog(),
-        onDismissed: (direction) => widget.onDelete(task),
-        child: _InProgressWave(
-          controller: _waveController,
-          child: wrapped,
-        ),
-      );
-    }
-
-    return Dismissible(
-      key: ValueKey(task.taskId),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        color: Colors.red,
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: const Icon(Icons.delete, color: Colors.white),
-      ),
-      confirmDismiss: (direction) async => await widget.showDeleteConfirmationDialog(),
-      onDismissed: (direction) => widget.onDelete(task),
-      child: wrapped,
-    );
-  }
-
-  Color _getPriorityColor(int priorityId) {
+  Color _priorityColor(int priorityId) {
     switch (priorityId) {
       case 1:
         return Colors.green;
@@ -227,22 +178,74 @@ class _TaskListViewState extends State<TaskListView> with SingleTickerProviderSt
         return Colors.grey;
     }
   }
+
+  @override
+  Widget build(BuildContext context) {
+    final title = Text(
+      task.title,
+      style: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        decoration: _isDone ? TextDecoration.lineThrough : TextDecoration.none,
+        color: _isDone ? Colors.black.withOpacity(0.6) : Colors.black,
+      ),
+    );
+
+    // a slim colored bar to visually separate title from status header
+    final leftBar = Container(width: 6, height: 56, decoration: BoxDecoration(color: _priorityColor(task.priorityId), borderRadius: BorderRadius.circular(4)));
+
+    final content = ListTile(
+      leading: leftBar,
+      title: title,
+      subtitle: _buildSubtitle(context),
+      trailing: IconButton(icon: const Icon(Icons.edit), onPressed: () => onEdit(task)),
+      tileColor: _isDone ? Colors.grey.shade50 : null,
+    );
+
+    final dismissible = Dismissible(
+      key: ValueKey(task.taskId),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        color: Colors.red,
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: const Icon(Icons.delete, color: Colors.white),
+      ),
+      confirmDismiss: (direction) async => await showDeleteConfirmationDialog(),
+      onDismissed: (direction) => onDelete(task),
+      child: Opacity(opacity: _isDone ? 0.55 : 1.0, child: content),
+    );
+
+    if (_isInProgress && !_isDone) {
+      return _InProgressWave(controller: waveController, child: dismissible);
+    }
+    return dismissible;
+  }
+
+  Widget _buildSubtitle(BuildContext context) {
+    final List<Widget> chips = [];
+    if (task.priorityName != null) {
+      chips.add(Chip(label: Text(task.priorityName!), backgroundColor: _priorityColor(task.priorityId), labelStyle: const TextStyle(color: Colors.white, fontSize: 12)));
+    }
+    if (task.categoryName != null) {
+      chips.add(Chip(label: Text(task.categoryName!), backgroundColor: Colors.blue.shade50, labelStyle: TextStyle(color: Colors.blue.shade800, fontSize: 12)));
+    }
+    if (task.dueDate != null) {
+      chips.add(Chip(label: Text(task.dueDate!.toLocal().toString().split(' ')[0]), backgroundColor: Colors.grey.shade100, labelStyle: TextStyle(color: Colors.grey.shade800, fontSize: 12)));
+    }
+    return Wrap(spacing: 6, runSpacing: 4, children: chips);
+  }
 }
 
-/// A simple repeating left-to-right animated gradient "wave" overlay.
-/// Uses a shared animation controller passed from parent to avoid many controllers.
+/// Animated overlay used when a task is in progress (keeps single controller).
 class _InProgressWave extends StatelessWidget {
   final AnimationController controller;
   final Widget child;
 
-  const _InProgressWave({
-    required this.controller,
-    required this.child,
-  });
+  const _InProgressWave({required this.controller, required this.child});
 
   @override
   Widget build(BuildContext context) {
-    final anim = controller;
     return Stack(
       children: [
         child,
@@ -250,9 +253,9 @@ class _InProgressWave extends StatelessWidget {
           child: IgnorePointer(
             ignoring: true,
             child: AnimatedBuilder(
-              animation: anim,
+              animation: controller,
               builder: (context, _) {
-                final t = anim.value;
+                final t = controller.value;
                 final dx = -0.8 + 1.8 * t;
                 return FractionalTranslation(
                   translation: Offset(dx, 0),
@@ -260,14 +263,10 @@ class _InProgressWave extends StatelessWidget {
                     width: MediaQuery.of(context).size.width * 1.6,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
+                        colors: [Colors.transparent, Colors.blue.withOpacity(0.10), Colors.transparent],
+                        stops: const [0.0, 0.5, 1.0],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
-                        colors: [
-                          Colors.transparent,
-                          Colors.blue.withOpacity(0.10),
-                          Colors.transparent,
-                        ],
-                        stops: const [0.0, 0.5, 1.0],
                       ),
                     ),
                   ),
