@@ -4,6 +4,17 @@ import 'base_http_service.dart';
 class PriorityService {
   final BaseHttpService _httpService = BaseHttpService();
 
+  Future<void> addPriority(String name) async {
+    try {
+      await _httpService.post(
+        '/priorities',
+        data: {'priorityName': name},
+      );
+    } catch (e) {
+      throw Exception('Error al agregar prioridad');
+    }
+  }
+
   Future<List<PriorityModel>> fetchPriorities() async {
     try {
       final response = await _httpService.get('/priorities');

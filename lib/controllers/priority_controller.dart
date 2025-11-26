@@ -4,6 +4,10 @@ import '../services/priority_service.dart';
 class PriorityController {
   final PriorityService _priorityService = PriorityService();
 
+  Future<void> addPriority(String name) {
+    return _priorityService.addPriority(name);
+  }
+
   Future<List<PriorityModel>> fetchPriorities() {
     return _priorityService.fetchPriorities();
   }
