@@ -23,7 +23,7 @@ class DeleteConfirmationDialog extends StatelessWidget {
 
   String get _defaultTitle => 'Confirm ${_capitalizeFirst(entityName)} Deletion';
   String get _defaultMessage =>
-      'Are you sure you want to permanently delete this ${entityName}? This action cannot be undone.';
+      'Are you sure you want to permanently delete this $entityName? This action cannot be undone.';
 
   String _capitalizeFirst(String text) {
     if (text.isEmpty) return text;

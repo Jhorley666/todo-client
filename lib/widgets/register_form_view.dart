@@ -36,9 +36,11 @@ class _RegisterFormViewState extends State<RegisterFormView> {
     });
 
     if (success) {
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Successfully registered')),
       );
+      // ignore: use_build_context_synchronously
       Navigator.pop(context);
     } else {
       setState(() {

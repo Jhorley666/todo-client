@@ -39,7 +39,7 @@ class TaskProgressWidget extends StatelessWidget {
     // Default colors based on theme
     final defaultProgressColor = progressColor ?? Theme.of(context).primaryColor;
     final defaultBackgroundColor = backgroundColor ?? 
-        Theme.of(context).colorScheme.surfaceVariant;
+        Theme.of(context).colorScheme.surfaceContainerHighest;
     final defaultTextStyle = textStyle ?? 
         Theme.of(context).textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.bold,

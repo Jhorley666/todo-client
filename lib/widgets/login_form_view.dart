@@ -36,10 +36,12 @@ class _LoginFormViewState extends State<LoginFormView> {
     });
 
     if (success) {
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Successfully logged in')),
       );
       Navigator.pushReplacement(
+        // ignore: use_build_context_synchronously
         context,
         MaterialPageRoute(builder: (context) => const TaskPage()),
       );

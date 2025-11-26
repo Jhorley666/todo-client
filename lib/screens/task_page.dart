@@ -15,7 +15,6 @@ import '../widgets/utils_widgets/delete_confirmation_dialog.dart';
 import '../widgets/utils_widgets/task_progress_widget.dart';
 import '../widgets/utils_widgets/task_timer_widget.dart';
 import '../models/task_statistics_model.dart';
-import 'category_page.dart';
 import '../layouts/base_layout.dart';
 
 class TaskPage extends StatefulWidget {

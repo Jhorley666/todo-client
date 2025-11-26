@@ -151,7 +151,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                     }
                   } : null, // Disable for new tasks
                 );
-              }).toList(),
+              }),
               ListTile(
                 title: Text('Fecha límite: ${_dueDate.toLocal().toString().split(' ')[0]}'),
                 trailing: const Icon(Icons.calendar_today),
@@ -180,7 +180,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
           onPressed: () {
             if (_formKey.currentState!.validate() && _selectedStatus != null) {
               // Convert TaskStatusModel.id (String) to int for statusId
-              final statusId = _selectedStatus!.id ?? 1;
+              final statusId = _selectedStatus!.id;
               widget.onSubmit(
                 title: _titleController.text,
                 description: _descController.text,
