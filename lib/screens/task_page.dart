@@ -198,6 +198,32 @@ class _TaskPageState extends State<TaskPage> {
     _loadTaskStatistics();
   }
 
+  Future<void> _updateTaskStatus(TaskModel task, int newStatusId) async {
+    try {
+      final oldStatusId = task.statusId;
+      if (oldStatusId == newStatusId) return;
+
+      await _taskController.updateTask(
+        id: task.taskId,
+        title: task.title,
+        description: task.description ?? '',
+        priorityId: task.priorityId,
+        categoryId: task.categoryId ?? 0,
+        statusId: newStatusId,
+        dueDate: task.dueDate ?? DateTime.now(),
+      );
+      
+      await _handleTaskStatusUpdate(task, newStatusId, task.priorityId);
+      _loadTasks();
+      _loadTaskStatistics();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating status: $e')),
+      );
+    }
+  }
+
   Future<bool?> _showDeleteConfirmationDialog() async {
     return DeleteConfirmationDialog.show(
       context,
@@ -390,6 +416,7 @@ class _TaskPageState extends State<TaskPage> {
                       onEdit: _editTask,
                       onDelete: _deleteTask,
                       showDeleteConfirmationDialog: _showDeleteConfirmationDialog,
+                      onStatusChange: _updateTaskStatus,
                     );
                   }
                 },

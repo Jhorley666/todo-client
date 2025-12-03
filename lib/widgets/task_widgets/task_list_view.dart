@@ -9,6 +9,7 @@ class TaskListView extends StatefulWidget {
   final void Function(TaskModel) onDelete;
   final Future<bool?> Function() showDeleteConfirmationDialog;
   final TaskStatusController? statusController;
+  final void Function(TaskModel, int) onStatusChange;
 
   const TaskListView({
     super.key,
@@ -16,6 +17,7 @@ class TaskListView extends StatefulWidget {
     required this.onEdit,
     required this.onDelete,
     required this.showDeleteConfirmationDialog,
+    required this.onStatusChange,
     this.statusController,
   });
 
@@ -93,6 +95,7 @@ class _TaskListViewState extends State<TaskListView> with SingleTickerProviderSt
             onEdit: widget.onEdit,
             onDelete: widget.onDelete,
             showDeleteConfirmationDialog: widget.showDeleteConfirmationDialog,
+            onStatusChange: widget.onStatusChange,
           ),
         ],
       ],
@@ -109,6 +112,7 @@ class StatusSection extends StatelessWidget {
   final void Function(TaskModel) onEdit;
   final void Function(TaskModel) onDelete;
   final Future<bool?> Function() showDeleteConfirmationDialog;
+  final void Function(TaskModel, int) onStatusChange;
 
   const StatusSection({
     super.key,
@@ -119,6 +123,7 @@ class StatusSection extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     required this.showDeleteConfirmationDialog,
+    required this.onStatusChange,
   });
 
   @override
@@ -139,6 +144,7 @@ class StatusSection extends StatelessWidget {
               onEdit: onEdit,
               onDelete: onDelete,
               showDeleteConfirmationDialog: showDeleteConfirmationDialog,
+              onStatusChange: onStatusChange,
             )),
       ],
     );
@@ -152,6 +158,7 @@ class TaskTile extends StatelessWidget {
   final void Function(TaskModel) onEdit;
   final void Function(TaskModel) onDelete;
   final Future<bool?> Function() showDeleteConfirmationDialog;
+  final void Function(TaskModel, int) onStatusChange;
 
   const TaskTile({
     super.key,
@@ -160,6 +167,7 @@ class TaskTile extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     required this.showDeleteConfirmationDialog,
+    required this.onStatusChange,
   });
 
   // Use statusId only (TaskModel has no statusName)
@@ -202,18 +210,62 @@ class TaskTile extends StatelessWidget {
       tileColor: _isDone ? Colors.grey.shade50 : null,
     );
 
+    // Feature 2: Double tap to In-progress
+    final gestureDetector = GestureDetector(
+      onDoubleTap: () {
+        if (!_isInProgress) {
+          onStatusChange(task, 2); // 2 is In-progress
+        }
+      },
+      child: content,
+    );
+
+    // Feature 1: Slide to Right -> Done
     final dismissible = Dismissible(
       key: ValueKey(task.taskId),
-      direction: DismissDirection.endToStart,
+      // Allow swiping both directions: StartToEnd (Done), EndToStart (Delete)
+      direction: DismissDirection.horizontal,
+      // Background for StartToEnd (Done) - Green
       background: Container(
+        color: Colors.green,
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: const Row(
+          children: [
+            Icon(Icons.check, color: Colors.white),
+            SizedBox(width: 8),
+            Text('Done', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+      // Secondary background for EndToStart (Delete) - Red
+      secondaryBackground: Container(
         color: Colors.red,
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: const Icon(Icons.delete, color: Colors.white),
       ),
-      confirmDismiss: (direction) async => await showDeleteConfirmationDialog(),
-      onDismissed: (direction) => onDelete(task),
-      child: Opacity(opacity: _isDone ? 0.55 : 1.0, child: content),
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.endToStart) {
+          // Delete
+          return await showDeleteConfirmationDialog();
+        } else if (direction == DismissDirection.startToEnd) {
+          // Done
+          if (!_isDone) {
+            onStatusChange(task, 3); // 3 is Done
+          }
+          // Do not dismiss the widget from the tree immediately, let the status change rebuild it in the new section
+          return true; 
+        }
+        return false;
+      },
+      onDismissed: (direction) {
+        if (direction == DismissDirection.endToStart) {
+          onDelete(task);
+        }
+        // For startToEnd, we already called onStatusChange in confirmDismiss.
+      },
+      child: Opacity(opacity: _isDone ? 0.55 : 1.0, child: gestureDetector),
     );
 
     if (_isInProgress && !_isDone) {
