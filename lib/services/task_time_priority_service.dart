@@ -34,19 +34,36 @@ class TaskTimePriorityService {
 
   Future<void> updateTaskTimePriority(
     int id,
-    DateTime time,
+    int time,
     int priorityId,
   ) async {
     try {
       await _httpService.put(
         '/tasks-time-priority/$id',
         data: {
-          'time': time.toIso8601String(),
+          'time': time,
           'priorityId': priorityId,
         },
       );
     } catch (e) {
       throw Exception('Error al actualizar la prioridad de tiempo de tarea');
+    }
+  }
+
+  Future<void> createTaskTimePriority(
+    int time,
+    int priorityId,
+  ) async {
+    try {
+      await _httpService.post(
+        '/tasks-time-priority',
+        data: {
+          'time': time,
+          'priorityId': priorityId,
+        },
+      );
+    } catch (e) {
+      throw Exception('Error al crear la prioridad de tiempo de tarea');
     }
   }
 

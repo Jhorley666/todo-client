@@ -18,10 +18,17 @@ class TaskTimePriorityController {
 
   Future<void> updateTaskTimePriority(
     int id,
-    DateTime time,
+    int time,
     int priorityId,
   ) {
     return _taskTimePriorityService.updateTaskTimePriority(id, time, priorityId);
+  }
+
+  Future<void> createTaskTimePriority(
+    int time,
+    int priorityId,
+  ) {
+    return _taskTimePriorityService.createTaskTimePriority(time, priorityId);
   }
 
   Future<void> deleteTaskTimePriority(int id) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:todo_client/screens/priority_page.dart';
 import '../../screens/task_page.dart';
 import '../../screens/category_page.dart';
+import '../../screens/task_time_priority_page.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -35,6 +36,13 @@ class AppDrawer extends StatelessWidget {
             title: const Text("Priorities"),
             onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => const PriorityPage()));
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.timer),
+            title: const Text("Task Time Priorities"),
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const TaskTimePriorityPage()));
             },
           ),
           ListTile(

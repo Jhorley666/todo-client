@@ -1,6 +1,6 @@
 class TaskTimePriorityModel {
   final int taskTimePriorityId;
-  final DateTime time;
+  final int time;
   final int priorityId;
 
   TaskTimePriorityModel({
@@ -12,7 +12,7 @@ class TaskTimePriorityModel {
   factory TaskTimePriorityModel.fromJson(Map<String, dynamic> json) {
     return TaskTimePriorityModel(
       taskTimePriorityId: json['taskTimePriorityId'] as int,
-      time: DateTime.parse(json['time'] as String),
+      time: json['time'] as int,
       priorityId: json['priorityId'] as int,
     );
   }
@@ -20,7 +20,7 @@ class TaskTimePriorityModel {
   Map<String, dynamic> toJson() {
     return {
       'taskTimePriorityId': taskTimePriorityId,
-      'time': time.toIso8601String(),
+      'time': time,
       'priorityId': priorityId,
     };
   }

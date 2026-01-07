@@ -102,13 +102,8 @@ class _TaskPageState extends State<TaskPage> {
             final taskTimePriority = await _taskTimePriorityController
                 .getTaskTimePriorityByPriorityId(task.priorityId);
             
-            // Extract time from DateTime (the time field represents the duration)
-            // Since it's stored as DateTime, we need to extract hours, minutes, seconds
-            final time = taskTimePriority.time;
-            // Extract duration from time field (treat as time of day representing duration)
-            // Calculate difference from midnight to get the actual duration
-            final midnight = DateTime(time.year, time.month, time.day);
-            final duration = time.difference(midnight);
+            // The time field is now in milliseconds
+            final duration = Duration(milliseconds: taskTimePriority.time);
             
             totalDuration += duration;
             _processedCompletedTaskIds.add(task.taskId);
@@ -165,11 +160,7 @@ class _TaskPageState extends State<TaskPage> {
             final taskTimePriority = await _taskTimePriorityController
                 .getTaskTimePriorityByPriorityId(priorityId);
             
-            final time = taskTimePriority.time;
-            // Extract duration from time field (treat as time of day representing duration)
-            // Calculate difference from midnight to get the actual duration
-            final midnight = DateTime(time.year, time.month, time.day);
-            final duration = time.difference(midnight);
+            final duration = Duration(milliseconds: taskTimePriority.time);
 
             if (mounted) {
               final int processedTaskId = taskIdToProcess;
