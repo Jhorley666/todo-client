@@ -90,18 +90,18 @@ class _TaskTimePriorityPageState extends State<TaskTimePriorityPage> {
 
 
 
-  String _formatDuration(int milliseconds) {
-    final duration = Duration(milliseconds: milliseconds);
+  String _formatDuration(int seconds) {
+    final duration = Duration(seconds: seconds);
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
-    final seconds = duration.inSeconds.remainder(60);
+    final remainingSeconds = duration.inSeconds.remainder(60);
     
     if (hours > 0) {
       return '$hours h $minutes min';
     } else if (minutes > 0) {
-      return '$minutes min $seconds s';
+      return '$minutes min $remainingSeconds s';
     } else {
-      return '$seconds s';
+      return '$remainingSeconds s';
     }
   }
 

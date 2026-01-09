@@ -33,7 +33,7 @@ class _TaskPageState extends State<TaskPage> {
 
   late Future<List<TaskModel>> _tasksFuture;
   late Future<TaskStatistics> _taskStatisticsFuture;
-  Duration _totalTimerDuration = Duration.zero;
+  int _totalTimerSeconds = 0;
   final List<int> _processedCompletedTaskIds = [];
 
   @override
@@ -80,7 +80,7 @@ class _TaskPageState extends State<TaskPage> {
     return tasks;
   }
 
-  Future<void> _calculateTotalDuration() async {
+    Future<void> _calculateTotalDuration() async {
     try {
       final tasks = await _taskController.fetchTasks();
       final statuses = await _taskStatusController.fetchTaskStatuses();
@@ -92,7 +92,7 @@ class _TaskPageState extends State<TaskPage> {
         orElse: () => statuses.first, // fallback to first status if not found
       );
 
-      Duration totalDuration = Duration.zero;
+      int totalSeconds = 0;
       _processedCompletedTaskIds.clear();
 
       for (var task in tasks) {
@@ -102,10 +102,9 @@ class _TaskPageState extends State<TaskPage> {
             final taskTimePriority = await _taskTimePriorityController
                 .getTaskTimePriorityByPriorityId(task.priorityId);
             
-            // The time field is now in milliseconds
-            final duration = Duration(milliseconds: taskTimePriority.time);
+            // The time field is now in seconds
+            totalSeconds += taskTimePriority.time;
             
-            totalDuration += duration;
             _processedCompletedTaskIds.add(task.taskId);
           } catch (e) {
             // If task time priority not found, skip this task
@@ -116,7 +115,7 @@ class _TaskPageState extends State<TaskPage> {
 
       if (mounted) {
         setState(() {
-          _totalTimerDuration = totalDuration;
+          _totalTimerSeconds = totalSeconds;
         });
       }
     } catch (e) {
@@ -160,12 +159,10 @@ class _TaskPageState extends State<TaskPage> {
             final taskTimePriority = await _taskTimePriorityController
                 .getTaskTimePriorityByPriorityId(priorityId);
             
-            final duration = Duration(milliseconds: taskTimePriority.time);
-
             if (mounted) {
               final int processedTaskId = taskIdToProcess;
               setState(() {
-                _totalTimerDuration += duration;
+                _totalTimerSeconds += taskTimePriority.time;
                 _processedCompletedTaskIds.add(processedTaskId);
               });
             }
@@ -380,7 +377,7 @@ class _TaskPageState extends State<TaskPage> {
             ),
             // Timer widget section
             TaskTimerWidget(
-              totalDuration: _totalTimerDuration,
+              totalSeconds: _totalTimerSeconds,
               onTimerComplete: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(

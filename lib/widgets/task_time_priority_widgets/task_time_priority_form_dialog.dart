@@ -23,7 +23,7 @@ class TaskTimePriorityFormDialog extends StatefulWidget {
 class _TaskTimePriorityFormDialogState extends State<TaskTimePriorityFormDialog> {
   final _formKey = GlobalKey<FormState>();
   int? _selectedPriorityId;
-  double _sliderValue = 60000; // Default 1 minute in ms
+  double _sliderValue = 60; // Default 1 minute in seconds
   bool _isLoading = false;
 
   @override
@@ -31,26 +31,26 @@ class _TaskTimePriorityFormDialogState extends State<TaskTimePriorityFormDialog>
     super.initState();
     if (widget.taskTimePriority != null) {
       _selectedPriorityId = widget.taskTimePriority!.priorityId;
-      // Ensure the value is within the slider's range (1000 - 3600000)
+      // Ensure the value is within the slider's range (1 - 3600)
       double value = widget.taskTimePriority!.time.toDouble();
-      if (value < 1000) value = 1000;
-      if (value > 3600000) value = 3600000;
+      if (value < 1) value = 1;
+      if (value > 3600) value = 3600;
       _sliderValue = value;
     }
   }
 
-  String _formatDuration(int milliseconds) {
-    final duration = Duration(milliseconds: milliseconds);
+  String _formatDuration(int seconds) {
+    final duration = Duration(seconds: seconds);
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
-    final seconds = duration.inSeconds.remainder(60);
+    final remainingSeconds = duration.inSeconds.remainder(60);
     
     if (hours > 0) {
       return '$hours h $minutes min';
     } else if (minutes > 0) {
-      return '$minutes min $seconds s';
+      return '$minutes min $remainingSeconds s';
     } else {
-      return '$seconds s';
+      return '$remainingSeconds s';
     }
   }
 
@@ -100,9 +100,9 @@ class _TaskTimePriorityFormDialogState extends State<TaskTimePriorityFormDialog>
               const SizedBox(height: 8),
               Slider(
                 value: _sliderValue,
-                min: 1000, // 1 second
-                max: 3600000, // 1 hour
-                divisions: 3600 - 1, // 1 second steps roughly
+                min: 1, // 1 second
+                max: 3600, // 1 hour
+                divisions: 3599, // 1 second steps
                 label: _formatDuration(_sliderValue.toInt()),
                 onChanged: (value) {
                   setState(() {

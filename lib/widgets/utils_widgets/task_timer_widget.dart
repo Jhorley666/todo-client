@@ -1,17 +1,19 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../controllers/user_timer_controller.dart';
+import '../../models/user_timer_model.dart';
 
 enum TimerState { stopped, playing, paused }
 
 class TaskTimerWidget extends StatefulWidget {
-  final Duration totalDuration;
+  final int totalSeconds;
   final VoidCallback? onTimerComplete;
   final double size;
   final double strokeWidth;
 
   const TaskTimerWidget({
     super.key,
-    required this.totalDuration,
+    required this.totalSeconds,
     this.onTimerComplete,
     this.size = 120.0,
     this.strokeWidth = 10.0,
@@ -22,91 +24,124 @@ class TaskTimerWidget extends StatefulWidget {
 }
 
 class _TaskTimerWidgetState extends State<TaskTimerWidget> {
-  Timer? _timer;
+  final UserTimerController _controller = UserTimerController();
+  Timer? _ticker;
   Duration _remainingDuration = Duration.zero;
   TimerState _timerState = TimerState.stopped;
-  DateTime? _startTime;
-  Duration _elapsedBeforePause = Duration.zero;
-  DateTime? _pauseTime;
+  bool _isLoading = false;
+  DateTime? _localEndTime;
 
   @override
   void initState() {
     super.initState();
-    _remainingDuration = widget.totalDuration;
+    _remainingDuration = Duration(seconds: widget.totalSeconds);
+    _fetchStatus();
   }
 
   @override
   void didUpdateWidget(TaskTimerWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.totalDuration != widget.totalDuration) {
-      if (_timerState == TimerState.stopped) {
-        _remainingDuration = widget.totalDuration;
-      }
+    if (oldWidget.totalSeconds != widget.totalSeconds) {
+       // If the widget receives a new total, logic might need adjustment
+       // depending on whether 'remaining' is driven by this total or the server.
+       // For now, valid server state takes precedence.
     }
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _ticker?.cancel();
     super.dispose();
   }
 
-  void _startTimer() {
-    if (_timerState == TimerState.paused) {
-      // Resume: adjust start time to account for pause duration
-      final pauseDuration = DateTime.now().difference(_pauseTime!);
-      _startTime = _startTime!.add(pauseDuration);
-      _pauseTime = null;
-    } else {
-      // Start fresh
-      _startTime = DateTime.now();
-      _elapsedBeforePause = Duration.zero;
+  Future<void> _fetchStatus() async {
+    setState(() => _isLoading = true);
+    try {
+      final status = await _controller.getTimerStatus();
+      _syncState(status);
+    } catch (e) {
+      debugPrint('Error fetching timer status: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
 
-    _timerState = TimerState.playing;
+  void _syncState(UserTimerModel model) {
+    final remainingSeconds = model.remainingSeconds ?? 0;
+    _remainingDuration = Duration(seconds: remainingSeconds);
 
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    if (model.isRunning == true) {
+      _timerState = TimerState.playing;
+      _startLocalTicker();
+    } else {
+      _timerState = TimerState.paused; // Or stopped? API only has Start/Pause usually implies Pause state.
+      _stopLocalTicker();
+    }
+    setState(() {});
+  }
+
+  void _startLocalTicker() {
+    _ticker?.cancel();
+    // Calculate expected end time to prevent drift
+    _localEndTime = DateTime.now().add(_remainingDuration);
+    
+    _ticker = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
         timer.cancel();
         return;
       }
 
-      final elapsed = DateTime.now().difference(_startTime!);
-      final newRemaining = widget.totalDuration - elapsed;
-
-      if (newRemaining.isNegative || newRemaining <= Duration.zero) {
-        setState(() {
-          _remainingDuration = Duration.zero;
-          _timerState = TimerState.stopped;
-        });
-        timer.cancel();
-        widget.onTimerComplete?.call();
-      } else {
-        setState(() {
-          _remainingDuration = newRemaining;
-        });
+      final now = DateTime.now();
+      if (_localEndTime != null) {
+        final newRemaining = _localEndTime!.difference(now);
+        
+        if (newRemaining.isNegative || newRemaining.inSeconds <= 0) {
+          setState(() {
+            _remainingDuration = Duration.zero;
+            _timerState = TimerState.stopped;
+          });
+          timer.cancel();
+          widget.onTimerComplete?.call();
+        } else {
+          setState(() {
+            _remainingDuration = newRemaining;
+          });
+        }
       }
     });
   }
 
-  void _pauseTimer() {
-    if (_timerState == TimerState.playing) {
-      _timer?.cancel();
-      _pauseTime = DateTime.now();
-      _timerState = TimerState.paused;
-      setState(() {});
+  void _stopLocalTicker() {
+    _ticker?.cancel();
+    _localEndTime = null;
+  }
+
+  Future<void> _startTimer() async {
+    setState(() => _isLoading = true);
+    try {
+      final model = await _controller.startTimer();
+      _syncState(model);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error starting timer: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _stopTimer() {
-    _timer?.cancel();
-    setState(() {
-      _remainingDuration = widget.totalDuration;
-      _timerState = TimerState.stopped;
-      _startTime = null;
-      _pauseTime = null;
-      _elapsedBeforePause = Duration.zero;
-    });
+  Future<void> _pauseTimer() async {
+    setState(() => _isLoading = true);
+    try {
+      final model = await _controller.pauseTimer();
+      _syncState(model);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error pausing timer: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   String _formatDuration(Duration duration) {
@@ -117,11 +152,11 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
   }
 
   Color _getProgressColor() {
-    if (widget.totalDuration == Duration.zero) {
+    if (widget.totalSeconds == 0) {
       return Colors.green;
     }
 
-    final progress = _remainingDuration.inSeconds / widget.totalDuration.inSeconds;
+    final progress = _remainingDuration.inSeconds / widget.totalSeconds;
 
     if (progress <= 0.25) {
       return Colors.red;
@@ -133,10 +168,10 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
   }
 
   double _getProgress() {
-    if (widget.totalDuration == Duration.zero) {
+    if (widget.totalSeconds == 0) {
       return 1.0;
     }
-    final denom = widget.totalDuration.inSeconds;
+    final denom = widget.totalSeconds;
     if (denom == 0) return 1.0;
     return (_remainingDuration.inSeconds / denom).clamp(0.0, 1.0);
   }
@@ -210,21 +245,24 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    IconButton(
-                      icon: Icon(
-                        _timerState == TimerState.playing ? Icons.pause : Icons.play_arrow,
-                        color: Theme.of(context).primaryColor,
+                    if (_isLoading)
+                      const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    else
+                      IconButton(
+                        icon: Icon(
+                          _timerState == TimerState.playing ? Icons.pause : Icons.play_arrow,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                        onPressed: _timerState == TimerState.playing ? _pauseTimer : _startTimer,
+                        tooltip: _timerState == TimerState.playing ? 'Pause' : 'Play',
                       ),
-                      onPressed: _timerState == TimerState.playing ? _pauseTimer : _startTimer,
-                      tooltip: _timerState == TimerState.playing ? 'Pause' : 'Play',
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.stop),
-                      color: Colors.red,
-                      onPressed: _timerState != TimerState.stopped ? _stopTimer : null,
-                      tooltip: 'Stop',
-                    ),
                   ],
                 ),
                 const SizedBox(width: 16),
