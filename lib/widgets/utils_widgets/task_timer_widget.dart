@@ -20,31 +20,35 @@ class TaskTimerWidget extends StatefulWidget {
   });
 
   @override
-  State<TaskTimerWidget> createState() => _TaskTimerWidgetState();
+  State<TaskTimerWidget> createState() => TaskTimerWidgetState();
 }
 
-class _TaskTimerWidgetState extends State<TaskTimerWidget> {
+class TaskTimerWidgetState extends State<TaskTimerWidget> {
   final UserTimerController _controller = UserTimerController();
   Timer? _ticker;
   Duration _remainingDuration = Duration.zero;
   TimerState _timerState = TimerState.stopped;
   bool _isLoading = false;
   DateTime? _localEndTime;
+  late int _totalSeconds;
 
   @override
   void initState() {
     super.initState();
+    _totalSeconds = widget.totalSeconds;
     _remainingDuration = Duration(seconds: widget.totalSeconds);
-    _fetchStatus();
+    fetchStatus();
   }
 
   @override
   void didUpdateWidget(TaskTimerWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.totalSeconds != widget.totalSeconds) {
-       // If the widget receives a new total, logic might need adjustment
-       // depending on whether 'remaining' is driven by this total or the server.
-       // For now, valid server state takes precedence.
+       // Only update if we are stopped, otherwise respect server state
+       if (_timerState == TimerState.stopped) {
+         _totalSeconds = widget.totalSeconds;
+         _remainingDuration = Duration(seconds: widget.totalSeconds);
+       }
     }
   }
 
@@ -54,7 +58,7 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
     super.dispose();
   }
 
-  Future<void> _fetchStatus() async {
+  Future<void> fetchStatus() async {
     setState(() => _isLoading = true);
     try {
       final status = await _controller.getTimerStatus();
@@ -67,6 +71,10 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
   }
 
   void _syncState(UserTimerModel model) {
+    if (model.totalSecondsAccumulated != null) {
+      _totalSeconds = model.totalSecondsAccumulated!;
+    }
+    
     final remainingSeconds = model.remainingSeconds ?? 0;
     _remainingDuration = Duration(seconds: remainingSeconds);
 
@@ -74,7 +82,7 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
       _timerState = TimerState.playing;
       _startLocalTicker();
     } else {
-      _timerState = TimerState.paused; // Or stopped? API only has Start/Pause usually implies Pause state.
+      _timerState = TimerState.paused; 
       _stopLocalTicker();
     }
     setState(() {});
@@ -102,6 +110,7 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
           });
           timer.cancel();
           widget.onTimerComplete?.call();
+          fetchStatus();
         } else {
           setState(() {
             _remainingDuration = newRemaining;
@@ -152,11 +161,11 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
   }
 
   Color _getProgressColor() {
-    if (widget.totalSeconds == 0) {
+    if (_totalSeconds == 0) {
       return Colors.green;
     }
 
-    final progress = _remainingDuration.inSeconds / widget.totalSeconds;
+    final progress = _remainingDuration.inSeconds / _totalSeconds;
 
     if (progress <= 0.25) {
       return Colors.red;
@@ -168,10 +177,10 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
   }
 
   double _getProgress() {
-    if (widget.totalSeconds == 0) {
+    if (_totalSeconds == 0) {
       return 1.0;
     }
-    final denom = widget.totalSeconds;
+    final denom = _totalSeconds;
     if (denom == 0) return 1.0;
     return (_remainingDuration.inSeconds / denom).clamp(0.0, 1.0);
   }

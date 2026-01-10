@@ -30,9 +30,10 @@ class _TaskPageState extends State<TaskPage> {
   final TaskStatusController _taskStatusController = TaskStatusController();
   final PriorityController _priorityController = PriorityController();
   final TaskTimePriorityController _taskTimePriorityController = TaskTimePriorityController();
+  final GlobalKey<TaskTimerWidgetState> _timerKey = GlobalKey<TaskTimerWidgetState>();
 
   late Future<List<TaskModel>> _tasksFuture;
-  late Future<TaskStatistics> _taskStatisticsFuture;
+  TaskStatistics? _taskStatistics;
   int _totalTimerSeconds = 0;
   final List<int> _processedCompletedTaskIds = [];
 
@@ -50,10 +51,17 @@ class _TaskPageState extends State<TaskPage> {
     });
   }
 
-  void _loadTaskStatistics() {
-    setState(() {
-      _taskStatisticsFuture = _taskController.fetchTaskStatistics();
-    });
+  Future<void> _loadTaskStatistics() async {
+    try {
+      final stats = await _taskController.fetchTaskStatistics();
+      if (mounted) {
+        setState(() {
+          _taskStatistics = stats;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading statistics: $e');
+    }
   }
 
   Future<List<TaskModel>> _loadTasksWithCategoryNames() async {
@@ -80,7 +88,7 @@ class _TaskPageState extends State<TaskPage> {
     return tasks;
   }
 
-    Future<void> _calculateTotalDuration() async {
+  Future<void> _calculateTotalDuration() async {
     try {
       final tasks = await _taskController.fetchTasks();
       final statuses = await _taskStatusController.fetchTaskStatuses();
@@ -138,6 +146,9 @@ class _TaskPageState extends State<TaskPage> {
 
       // Check if task status changed to "done"
       if (newStatusId == completedStatus.id) {
+        // Trigger timer refresh
+        _timerKey.currentState?.fetchStatus();
+
         int? taskIdToProcess;
         
         if (oldTask != null) {
@@ -365,8 +376,8 @@ class _TaskPageState extends State<TaskPage> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      TaskProgressWidgetWithStates(
-                        statisticsFuture: _taskStatisticsFuture,
+                      TaskProgressWidget(
+                        statistics: _taskStatistics,
                         size: 120.0,
                         strokeWidth: 10.0,
                       ),
@@ -377,6 +388,7 @@ class _TaskPageState extends State<TaskPage> {
             ),
             // Timer widget section
             TaskTimerWidget(
+              key: _timerKey,
               totalSeconds: _totalTimerSeconds,
               onTimerComplete: () {
                 ScaffoldMessenger.of(context).showSnackBar(
