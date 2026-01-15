@@ -3,6 +3,8 @@ import 'package:todo_client/screens/priority_page.dart';
 import '../../screens/task_page.dart';
 import '../../screens/category_page.dart';
 import '../../screens/task_time_priority_page.dart';
+import '../../controllers/auth_controller.dart';
+import '../../screens/login_page.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -48,8 +50,14 @@ class AppDrawer extends StatelessWidget {
           ListTile(
               leading: const Icon(Icons.logout),
               title: const Text("Sign Out"),
-              onTap: () {
-                Navigator.pushReplacementNamed(context, '/signout');
+              onTap: () async {
+                await AuthController().logout();
+                if (context.mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => const LoginPage()),
+                    (route) => false,
+                  );
+                }
               },
             ),          
         ],

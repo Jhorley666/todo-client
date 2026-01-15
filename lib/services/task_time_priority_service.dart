@@ -6,7 +6,7 @@ class TaskTimePriorityService {
 
   Future<List<TaskTimePriorityModel>> fetchTaskTimePriorities() async {
     try {
-      final response = await _httpService.get('/tasks-time-priority');
+      final response = await _httpService.get('/tasks-time-priority/user');
       final List<dynamic> data = response.data;
       return data.map((json) => TaskTimePriorityModel.fromJson(json)).toList();
     } catch (e) {

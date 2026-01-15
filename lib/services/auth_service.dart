@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'base_http_service.dart';
+import '../models/logout_response.dart';
 
 class AuthService {
   final BaseHttpService _httpService = BaseHttpService();
@@ -27,9 +28,19 @@ class AuthService {
     }
   }
 
-  Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('jwt_token');
+  Future<LogoutResponse?> logout() async {
+    try {
+      final response = await _httpService.post('/auth/logout');
+      if (response.statusCode == 200) {
+        return LogoutResponse.fromJson(response.data);
+      }
+    } catch (e) {
+      // Proceed to local logout even if server fails
+    } finally {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('jwt_token');
+    }
+    return null;
   }
 
   Future<String?> getToken() async {

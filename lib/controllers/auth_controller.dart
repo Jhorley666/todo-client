@@ -1,6 +1,7 @@
 import 'package:todo_client/models/register_model.dart';
 
 import '../models/login_model.dart';
+import '../models/logout_response.dart';
 import '../services/auth_service.dart';
 
 class AuthController {
@@ -14,7 +15,7 @@ class AuthController {
     return _authService.register(registerModel.username, registerModel.password, registerModel.email);
   }
 
-  Future<void> logout() {
+  Future<LogoutResponse?> logout() {
     return _authService.logout();
   }
 
